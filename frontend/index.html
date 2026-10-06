@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Questionnaire</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f7fb;
+    color: #172033;
+}
+
+.container {
+    max-width: 880px;
+    margin: 45px auto;
+    padding: 0 20px;
+}
+
+.card {
+    background: white;
+    border-radius: 15px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+}
+
+.header h1 {
+    margin: 0 0 8px;
+    font-size: 32px;
+}
+
+.header p {
+    margin: 0;
+    color: #667085;
+    font-size: 16px;
+}
+
+.question-card {
+    padding: 25px 32px;
+}
+
+.question-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.required {
+    color: #dc2626;
+}
+
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid #d5dae3;
+    border-radius: 9px;
+    font-size: 15px;
+    outline: none;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+    border-color: #2563eb;
+}
+
+.option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #e0e4eb;
+    border-radius: 9px;
+    padding: 13px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.option:hover {
+    background: #f8faff;
+}
+
+.option input {
+    cursor: pointer;
+}
+
+.submit-card {
+    text-align: center;
+}
+
+button {
+    width: 100%;
+    border: 0;
+    border-radius: 9px;
+    padding: 14px;
+    background: #111827;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1f2937;
+}
+
+button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.message {
+    padding: 13px 15px;
+    border-radius: 9px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.message.show {
+    display: block;
+}
+
+.message.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.message.success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.loading {
+    text-align: center;
+    color: #667085;
+    padding: 30px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 600px) {
+    .container {
+        margin: 20px auto;
+    }
+
+    .card,
+    .question-card {
+        padding: 22px;
+    }
+
+    .header h1 {
+        font-size: 27px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card header">
+        <h1>Questionnaire</h1>
+        <p>Please complete the questionnaire below.</p>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <form id="questionnaireForm">
+
+        <div id="questionsContainer">
+            <div class="loading">Loading questions...</div>
+        </div>
+
+        <div id="submitCard" class="card submit-card hidden">
+            <button id="submitButton" type="submit">
+                Submit Questionnaire
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+const API_URL = "http://127.0.0.1:8000";
+
+let questions = [];
+
+document.addEventListener("DOMContentLoaded", loadQuestions);
+
+async function loadQuestions() {
+    const container = document.getElementById("questionsContainer");
+
+    try {
+        const response = await fetch(`${API_URL}/questions`);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || "Unable to load questions");
+        }
+
+        questions = result.data || [];
+
+        if (!questions.length) {
+            container.innerHTML = `
+                <div class="card">
+                    No questions available.
+                </div>
+            `;
+            return;
+        }
+
+        renderQuestions();
+
+        document.getElementById("submitCard").classList.remove("hidden");
+
+    } catch (error) {
+        showMessage(error.message, "error");
+        container.innerHTML = "";
+    }
+}
+
+function renderQuestions() {
+    const container = document.getElementById("questionsContainer");
+
+    container.innerHTML = questions.map((q, index) => {
+
+        const number = index + 1;
+        const requiredMark = q.required
+            ? `<span class="required"> *</span>`
+            : "";
+
+        let inputHTML = "";
+
+        if (q.type === "TEXT") {
+            inputHTML = `
+                <input
+                    type="text"
+                    class="answer-input"
+                    data-question-id="${escapeHtml(q.question_id)}"
+                    data-type="TEXT"
+                    ${q.required ? "required" : ""}
+                >
+            `;
+        }
+
+        else if (q.type === "MCQ") {
+            inputHTML = q.options.map((option, optionIndex) => `
+                <label class="option">
+                    <input
+                        type="radio"
+                        name="${escapeHtml(q.question_id)}"
+                        value="${escapeHtml(option)}"
+                        data-question-id="${escapeHtml(q.question_id)}"
+                        data-type="MCQ"
+                        ${q.required && optionIndex === 0 ? "required" : ""}
+                    >
+                    <span>${escapeHtml(option)}</span>
+                </label>
+            `).join("");
+        }
+
+        else if (q.type === "YES_NO") {
+            inputHTML = q.options.map((option, optionIndex) => `
+                <label class="option">
+                    <input
+                        type="radio"
+                        name="${escapeHtml(q.question_id)}"
+                        value="${escapeHtml(option)}"
+                        data-question-id="${escapeHtml(q.question_id)}"
+                        data-type="YES_NO"
+                        ${q.required && optionIndex === 0 ? "required" : ""}
+                    >
+                    <span>${escapeHtml(option)}</span>
+                </label>
+            `).join("");
+        }
+
+        return `
+            <div class="card question-card">
+                <div class="question-title">
+                    ${number}. ${escapeHtml(q.question)}${requiredMark}
+                </div>
+                ${inputHTML}
+            </div>
+        `;
+
+    }).join("");
+}
+
+document.getElementById("questionnaireForm").addEventListener(
+    "submit",
+    submitQuestionnaire
+);
+
+async function submitQuestionnaire(event) {
+    event.preventDefault();
+
+    hideMessage();
+
+    const answers = {};
+
+    for (const q of questions) {
+
+        if (q.type === "TEXT") {
+
+            const input = document.querySelector(
+                `[data-question-id="${CSS.escape(q.question_id)}"]`
+            );
+
+            const value = input ? input.value.trim() : "";
+
+            if (q.required && !value) {
+                showMessage(`Please answer: ${q.question}`, "error");
+                input?.focus();
+                return;
+            }
+
+            answers[q.question_id] = value;
+        }
+
+        else {
+            const selected = document.querySelector(
+                `input[name="${CSS.escape(q.question_id)}"]:checked`
+            );
+
+            if (q.required && !selected) {
+                showMessage(`Please answer: ${q.question}`, "error");
+                return;
+            }
+
+            answers[q.question_id] = selected ? selected.value : "";
+        }
+    }
+
+    /*
+       The database/API expects a "name" field.
+       If the questionnaire contains a question such as
+       "Enter your Name", use that answer automatically.
+    */
+    let name = "";
+
+    const nameQuestion = questions.find(q =>
+        String(q.question || "")
+            .toLowerCase()
+            .replace(/[^a-z]/g, "")
+            .includes("name")
+    );
+
+    if (nameQuestion) {
+        name = String(answers[nameQuestion.question_id] || "").trim();
+    }
+
+    /*
+       Fallback: if there is no name question, use the first
+       text answer as the submission name.
+    */
+    if (!name) {
+        const firstTextQuestion = questions.find(q => q.type === "TEXT");
+
+        if (firstTextQuestion) {
+            name = String(
+                answers[firstTextQuestion.question_id] || ""
+            ).trim();
+        }
+    }
+
+    if (!name) {
+        showMessage("Please enter your name.", "error");
+        return;
+    }
+
+    const button = document.getElementById("submitButton");
+
+    button.disabled = true;
+    button.textContent = "Submitting...";
+
+    try {
+        const response = await fetch(`${API_URL}/responses`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                name: name,
+                answers: answers
+            })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.detail || "Submission failed");
+        }
+
+        showMessage(
+            `Questionnaire submitted successfully. Submission ID: ${result.submission_id}`,
+            "success"
+        );
+
+        document.getElementById("questionnaireForm").reset();
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+
+    } catch (error) {
+        showMessage(error.message, "error");
+    } finally {
+        button.disabled = false;
+        button.textContent = "Submit Questionnaire";
+    }
+}
+
+function showMessage(text, type) {
+    const message = document.getElementById("message");
+
+    message.textContent = text;
+    message.className = `message show ${type}`;
+}
+
+function hideMessage() {
+    const message = document.getElementById("message");
+    message.className = "message";
+    message.textContent = "";
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+</script>
+
+</body>
+</html>

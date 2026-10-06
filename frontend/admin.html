@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questionnaire Admin</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #172033;
+        }
+
+        .wrap {
+            max-width: 1200px;
+            margin: 35px auto;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px #0000000d;
+        }
+
+        h1,
+        h2 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin: 14px 0 5px;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #d7dce5;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 90px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .secondary {
+            background: #e8ecf3;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .msg {
+            display: none;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .msg.show {
+            display: block;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .item {
+            border: 1px solid #e1e5ec;
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 12px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .opt {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .opt input {
+            margin: 0;
+        }
+
+        .login {
+            max-width: 420px;
+            margin: 100px auto;
+        }
+
+        .answer {
+            white-space: pre-wrap;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        @media (max-width: 700px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN -->
+    <div id="login" class="card login">
+        <h1>Admin Login</h1>
+
+        <label>Password</label>
+        <input id="password" type="password">
+
+        <div class="actions">
+            <button class="primary" onclick="login()">
+                Login
+            </button>
+        </div>
+
+        <div id="loginMsg" class="msg"></div>
+    </div>
+
+    <!-- ADMIN APP -->
+    <div id="app" class="wrap hidden">
+
+        <!-- HEADER -->
+        <div class="top">
+            <div>
+                <h1>Questionnaire Admin</h1>
+                <div>PostgreSQL</div>
+            </div>
+
+            <button class="secondary" onclick="logout()">
+                Logout
+            </button>
+        </div>
+
+        <!-- QUESTION FORM -->
+        <div class="card">
+
+            <h2 id="title">Add Question</h2>
+
+            <input id="editId" type="hidden">
+
+            <label>Question</label>
+            <textarea id="question"></textarea>
+
+            <div class="grid">
+
+                <div>
+                    <label>Type</label>
+
+                    <select id="type" onchange="typeChanged()">
+                        <option>TEXT</option>
+                        <option>MCQ</option>
+                        <option>YES_NO</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label>
+                        <input
+                            id="required"
+                            type="checkbox"
+                            style="width:auto"
+                        >
+                        Required
+                    </label>
+                </div>
+
+            </div>
+
+            <!-- OPTIONS -->
+            <div id="opts" class="hidden">
+
+                <label>Options</label>
+
+                <div id="optionList"></div>
+
+                <div class="actions">
+                    <button
+                        class="secondary"
+                        onclick="addOption()"
+                    >
+                        + Add Option
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- FORM ACTIONS -->
+            <div class="actions">
+
+                <button
+                    class="primary"
+                    onclick="saveQuestion()"
+                >
+                    Save Question
+                </button>
+
+                <button
+                    id="cancel"
+                    class="secondary hidden"
+                    onclick="resetForm()"
+                >
+                    Cancel Edit
+                </button>
+
+            </div>
+
+            <div id="formMsg" class="msg"></div>
+
+        </div>
+
+        <!-- QUESTIONS -->
+        <div class="card">
+
+            <div class="top">
+                <h2>Questions</h2>
+
+                <button
+                    class="secondary"
+                    onclick="loadQuestions()"
+                >
+                    Refresh
+                </button>
+            </div>
+
+            <div id="questions">
+                Loading...
+            </div>
+
+        </div>
+
+        <!-- RESPONSES -->
+        <div class="card">
+
+            <div class="top">
+                <h2>Responses</h2>
+
+                <button
+                    class="secondary"
+                    onclick="loadResponses()"
+                >
+                    Refresh
+                </button>
+            </div>
+
+            <div id="responses">
+                Loading...
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const API = "http://127.0.0.1:8000";
+
+        let token = sessionStorage.getItem("adminToken");
+        let questions = [];
+
+        if (token) {
+            showApp();
+        }
+
+        function msg(id, t, err = false) {
+            const e = document.getElementById(id);
+
+            e.textContent = t;
+            e.className = "msg show " + (err ? "error" : "ok");
+        }
+
+        async function login() {
+            try {
+                const response = await fetch(
+                    API + "/admin/login",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            password:
+                                document.getElementById("password").value
+                        })
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail);
+                }
+
+                token = data.token;
+
+                sessionStorage.setItem(
+                    "adminToken",
+                    token
+                );
+
+                showApp();
+
+            } catch (e) {
+                msg(
+                    "loginMsg",
+                    e.message,
+                    true
+                );
+            }
+        }
+
+        function showApp() {
+            loginEl("login", true);
+            loginEl("app", false);
+
+            loadQuestions();
+            loadResponses();
+        }
+
+        function loginEl(id, hidden) {
+            document
+                .getElementById(id)
+                .classList
+                .toggle("hidden", hidden);
+        }
+
+        function logout() {
+            sessionStorage.removeItem("adminToken");
+            token = null;
+            location.reload();
+        }
+
+        async function api(path, opt = {}) {
+            opt.headers = {
+                ...(opt.headers || {}),
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json"
+            };
+
+            const response = await fetch(
+                API + path,
+                opt
+            );
+
+            const data = await response.json();
+
+            if (response.status === 401) {
+                logout();
+                throw new Error("Session expired");
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    data.detail || "Request failed"
+                );
+            }
+
+            return data;
+        }
+
+        function typeChanged() {
+            const type =
+                document.getElementById("type").value;
+
+            const optionsContainer =
+                document.getElementById("opts");
+
+            optionsContainer.classList.toggle(
+                "hidden",
+                type !== "MCQ"
+            );
+
+            if (
+                type === "MCQ" &&
+                !document.querySelector(".option")
+            ) {
+                addOption();
+                addOption();
+            }
+        }
+
+        function addOption(value = "") {
+            const list =
+                document.getElementById("optionList");
+
+            if (list.children.length >= 4) {
+                return msg(
+                    "formMsg",
+                    "Maximum 4 options",
+                    true
+                );
+            }
+
+            const div =
+                document.createElement("div");
+
+            div.className = "opt";
+
+            div.innerHTML =
+                '<input class="option" value="' +
+                esc(value) +
+                '" placeholder="Option">' +
+                '<button class="danger" onclick="this.parentElement.remove()">' +
+                "Remove" +
+                "</button>";
+
+            list.appendChild(div);
+        }
+
+        async function saveQuestion() {
+            try {
+                const question =
+                    document
+                        .getElementById("question")
+                        .value
+                        .trim();
+
+                const type =
+                    document.getElementById("type").value;
+
+                const options =
+                    type === "MCQ"
+                        ? [...document.querySelectorAll(".option")]
+                            .map(x => x.value.trim())
+                            .filter(Boolean)
+                        : [];
+
+                const id =
+                    document.getElementById("editId").value;
+
+                if (!question) {
+                    throw new Error(
+                        "Question is required"
+                    );
+                }
+
+                if (
+                    type === "MCQ" &&
+                    options.length < 2
+                ) {
+                    throw new Error(
+                        "MCQ needs at least 2 options"
+                    );
+                }
+
+                const body = {
+                    question: question,
+                    question_type: type,
+                    required:
+                        document.getElementById(
+                            "required"
+                        ).checked,
+                    options: options
+                };
+
+                const data = await api(
+                    id
+                        ? "/admin/questions/" + id
+                        : "/admin/questions",
+                    {
+                        method: id ? "PUT" : "POST",
+                        body: JSON.stringify(body)
+                    }
+                );
+
+                msg(
+                    "formMsg",
+                    data.message
+                );
+
+                resetForm();
+                loadQuestions();
+
+            } catch (e) {
+                msg(
+                    "formMsg",
+                    e.message,
+                    true
+                );
+            }
+        }
+
+        async function loadQuestions() {
+            try {
+                const data =
+                    await api("/admin/questions");
+
+                questions = data.data || [];
+
+                document.getElementById(
+                    "questions"
+                ).innerHTML =
+                    questions.length
+                        ? questions
+                            .map(
+                                q =>
+                                    '<div class="item">' +
+                                    '<span class="badge">' +
+                                    esc(q.question_id) +
+                                    "</span>" +
+
+                                    '<span class="badge">' +
+                                    esc(q.type) +
+                                    "</span>" +
+
+                                    (
+                                        q.required
+                                            ? '<span class="badge">Required</span>'
+                                            : ""
+                                    ) +
+
+                                    "<h3>" +
+                                    esc(q.question) +
+                                    "</h3>" +
+
+                                    (
+                                        q.options.length
+                                            ? "<div>Options: " +
+                                              q.options
+                                                  .map(esc)
+                                                  .join(" • ") +
+                                              "</div>"
+                                            : ""
+                                    ) +
+
+                                    '<div class="actions">' +
+
+                                    '<button class="warning" onclick="editQ(\'' +
+                                    q.question_id +
+                                    "')\">" +
+                                    "Edit" +
+                                    "</button>" +
+
+                                    '<button class="danger" onclick="deleteQ(\'' +
+                                    q.question_id +
+                                    "')\">" +
+                                    "Delete" +
+                                    "</button>" +
+
+                                    "</div>" +
+                                    "</div>"
+                            )
+                            .join("")
+                        : "<p>No questions found.</p>";
+
+            } catch (e) {
+                document.getElementById(
+                    "questions"
+                ).textContent = e.message;
+            }
+        }
+
+        function editQ(id) {
+            const question =
+                questions.find(
+                    x => x.question_id === id
+                );
+
+            if (!question) {
+                return;
+            }
+
+            document.getElementById(
+                "editId"
+            ).value = id;
+
+            document.getElementById(
+                "question"
+            ).value = question.question;
+
+            document.getElementById(
+                "type"
+            ).value = question.type;
+
+            document.getElementById(
+                "required"
+            ).checked = question.required;
+
+            document.getElementById(
+                "optionList"
+            ).innerHTML = "";
+
+            if (question.type === "MCQ") {
+                document
+                    .getElementById("opts")
+                    .classList
+                    .remove("hidden");
+
+                question.options.forEach(
+                    addOption
+                );
+
+            } else {
+                document
+                    .getElementById("opts")
+                    .classList
+                    .add("hidden");
+            }
+
+            document.getElementById(
+                "title"
+            ).textContent =
+                "Edit " + id;
+
+            document.getElementById(
+                "cancel"
+            ).classList.remove("hidden");
+
+            scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
+
+        async function deleteQ(id) {
+            if (!confirm("Delete " + id + "?")) {
+                return;
+            }
+
+            try {
+                const data =
+                    await api(
+                        "/admin/questions/" + id,
+                        {
+                            method: "DELETE"
+                        }
+                    );
+
+                msg(
+                    "formMsg",
+                    data.message
+                );
+
+                loadQuestions();
+
+            } catch (e) {
+                msg(
+                    "formMsg",
+                    e.message,
+                    true
+                );
+            }
+        }
+
+        function resetForm() {
+            document.getElementById(
+                "editId"
+            ).value = "";
+
+            document.getElementById(
+                "question"
+            ).value = "";
+
+            document.getElementById(
+                "type"
+            ).value = "TEXT";
+
+            document.getElementById(
+                "required"
+            ).checked = false;
+
+            document.getElementById(
+                "optionList"
+            ).innerHTML = "";
+
+            document.getElementById(
+                "opts"
+            ).classList.add("hidden");
+
+            document.getElementById(
+                "title"
+            ).textContent =
+                "Add Question";
+
+            document.getElementById(
+                "cancel"
+            ).classList.add("hidden");
+        }
+
+        async function loadResponses() {
+            try {
+                const data =
+                    await api("/admin/responses");
+
+                const responses =
+                    data.data || [];
+
+                document.getElementById(
+                    "responses"
+                ).innerHTML =
+                    responses.length
+                        ? responses
+                            .map(
+                                response =>
+                                    '<div class="item">' +
+
+                                    "<b>" +
+                                    esc(
+                                        response.submission_id
+                                    ) +
+                                    "</b>" +
+
+                                    "<div>Name: " +
+                                    esc(
+                                        response.name
+                                    ) +
+                                    "</div>" +
+
+                                    "<div>Submitted: " +
+                                    esc(
+                                        response.submitted_at || ""
+                                    ) +
+                                    "</div>" +
+
+                                    '<div class="answer">' +
+                                    esc(
+                                        JSON.stringify(
+                                            response.answers,
+                                            null,
+                                            2
+                                        )
+                                    ) +
+                                    "</div>" +
+
+                                    "</div>"
+                            )
+                            .join("")
+                        : "<p>No responses yet.</p>";
+
+            } catch (e) {
+                document.getElementById(
+                    "responses"
+                ).textContent = e.message;
+            }
+        }
+
+        function esc(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+    </script>
+
+</body>
+</html>
